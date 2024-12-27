@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:3000/notes";
+export const BASE_URL = "http://localhost:3000/notes";
 
 // Fetch notes
 export const fetchNotes = async () => {

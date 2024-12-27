@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchNotes, addNote, updateNote, deleteNote } from "../api/notes";
+import { addNote, updateNote, deleteNote, BASE_URL } from "../api/notes";
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 type Note = {
   id: string;
@@ -20,20 +21,37 @@ const Home = () => {
   });
 
   // Fetch notes
-  const { data: notes, isLoading } = useQuery({
+  const {
+    data: notes,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["notes"],
-    queryFn: fetchNotes,
-    initialData: [],
+    queryFn: async () => {
+      if (!navigator.onLine) {
+        const cachedNotes = queryClient.getQueryData<Note[]>(["notes"]);
+        if (cachedNotes) return cachedNotes;
+        throw new Error("No cached notes available offline.");
+      }
+      // Fetch notes from server when online
+      const response = await axios.get(BASE_URL);
+      return response.data;
+    },
+    initialData: () => {
+      const cachedNotes = queryClient.getQueryData(["notes"]);
+      console.log(cachedNotes);
+      return cachedNotes || [];
+    },
   });
 
   // Create note mutation
   const createMutation = useMutation({
     mutationFn: (note: { title: string; body: string }) => addNote(note),
     onMutate: async (newNote) => {
-      console.log("onMutate");
       await queryClient.cancelQueries({ queryKey: ["notes"] });
       const previousNotes = queryClient.getQueryData(["notes"]);
       queryClient.setQueryData(["notes"], (old: Note[]) => [...old, newNote]);
+      if (!navigator.onLine) closeModal();
       return { previousNotes };
     },
     onError: (_, __, context) => {
@@ -54,6 +72,25 @@ const Home = () => {
       id: string;
       note: { title: string; body: string };
     }) => updateNote({ id, ...note }),
+    onMutate: async ({ id, note }) => {
+      await queryClient.cancelQueries({ queryKey: ["notes"] });
+
+      const previousNotes = queryClient.getQueryData<Note[]>(["notes"]);
+      queryClient.setQueryData(["notes"], (old: Note[] | undefined) => {
+        if (!old) return [];
+        return old.map((existingNote) =>
+          existingNote.id === id ? { ...existingNote, ...note } : existingNote
+        );
+      });
+
+      // Close modal for offline mode
+      if (!navigator.onLine) closeModal();
+
+      return { previousNotes };
+    },
+    onError: (_, __, context) => {
+      queryClient.setQueryData(["notes"], context?.previousNotes);
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
       closeModal();
@@ -61,7 +98,21 @@ const Home = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteNote(id),
+    mutationFn: async (id: string) => {
+      return deleteNote(id);
+    },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["notes"] });
+      const previousNotes = queryClient.getQueryData<Note[]>(["notes"]);
+      queryClient.setQueryData(["notes"], (old: Note[] | undefined) => {
+        if (!old) return [];
+        return old.filter((note) => note.id !== id);
+      });
+      return { previousNotes };
+    },
+    onError: (_, __, context) => {
+      queryClient.setQueryData(["notes"], context?.previousNotes);
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
@@ -112,6 +163,24 @@ const Home = () => {
     }
   };
 
+  // Refresh Notes
+  const handleRefresh = async () => {
+    if (isOnline) {
+      try {
+        await refetch(); // Refetch notes from the server
+      } catch (error) {
+        console.error("Error fetching notes:", error);
+      }
+    } else {
+      const cachedNotes = queryClient.getQueryData<Note[]>(["notes"]);
+      if (cachedNotes) {
+        queryClient.setQueryData(["notes"], cachedNotes);
+      } else {
+        console.warn("No cached notes available.");
+      }
+    }
+  };
+
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-screen">
@@ -134,7 +203,16 @@ const Home = () => {
           </span>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">My Notes</h1>
+        {/* Refresh Button */}
+        <div className="mb-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-800">My Notes</h1>
+          <button
+            onClick={handleRefresh}
+            className="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition"
+          >
+            Refresh
+          </button>
+        </div>
 
         {/* Add Note Button */}
         <button

@@ -13,6 +13,9 @@ export default defineConfig({
       devOptions: {
         enabled: true,
       },
+      workbox: {
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+      },
       manifest: {
         name: "Notes App",
         short_name: "Notes",
