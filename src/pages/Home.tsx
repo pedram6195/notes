@@ -23,7 +23,7 @@ const Home = () => {
   // Fetch notes
   const {
     data: notes,
-    isLoading,
+    isFetching,
     refetch,
   } = useQuery({
     queryKey: ["notes"],
@@ -181,13 +181,6 @@ const Home = () => {
     }
   };
 
-  if (isLoading)
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <p className="text-lg font-semibold text-gray-700">Loading notes...</p>
-      </div>
-    );
-
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
@@ -208,9 +201,9 @@ const Home = () => {
           <h1 className="text-2xl font-bold text-gray-800">My Notes</h1>
           <button
             onClick={handleRefresh}
-            className="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition"
+            className="bg-amber-600 text-white px-4 py-2 rounded-md transition"
           >
-            Refresh
+            {isFetching ? "Loading..." : "Refresh"}
           </button>
         </div>
 
