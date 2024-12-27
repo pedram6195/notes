@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const BASE_URL = "http://localhost:3000/notes";
+export const BASE_URL = "https://notes-api-r040.onrender.com/notes";
 
 // Fetch notes
 export const fetchNotes = async () => {
