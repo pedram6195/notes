@@ -31,7 +31,7 @@ const Home = () => {
       if (!navigator.onLine) {
         const cachedNotes = queryClient.getQueryData<Note[]>(["notes"]);
         if (cachedNotes) return cachedNotes;
-        throw new Error("No cached notes available offline.");
+        console.log("No cached notes available offline.");
       }
       // Fetch notes from server when online
       const response = await axios.get(BASE_URL);
@@ -39,7 +39,6 @@ const Home = () => {
     },
     initialData: () => {
       const cachedNotes = queryClient.getQueryData(["notes"]);
-      console.log(cachedNotes);
       return cachedNotes || [];
     },
   });
@@ -201,7 +200,7 @@ const Home = () => {
           <h1 className="text-2xl font-bold text-gray-800">My Notes</h1>
           <button
             onClick={handleRefresh}
-            className="bg-amber-600 text-white px-4 py-2 rounded-md transition"
+            className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-md transition"
           >
             {isFetching ? "Loading..." : "Refresh"}
           </button>
